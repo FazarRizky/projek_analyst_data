@@ -13,7 +13,7 @@ st.title("Dashboard Analisis Penyewaan Sepeda")
 
 @st.cache_data
 def load_data():
-    df = pd.read_csv("..\dashboard\main_data.csv")
+    df = pd.read_csv("../dashboard/main_data.csv")
     day_df = df.drop_duplicates(subset=['dteday'])[['dteday', 'season', 'weathersit_x', 'cnt_x', 'Level_deman']]
     hour_df = df[['dteday', 'season', 'hr', 'weathersit_y', 'cnt_y']]
     
@@ -51,7 +51,7 @@ if data_loaded:
         
         fig, ax = plt.subplots(figsize=(8, 6))
         ax.pie(summary_df[count_col], labels=summary_df['season_label'], autopct='%1.1f%%', 
-               startangle=90, colors=sns.color_palette(color_palette))
+                startangle=90, colors=sns.color_palette(color_palette))
         ax.set_title(title)
         ax.axis('equal')
         
