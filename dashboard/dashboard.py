@@ -164,8 +164,8 @@ if data_loaded:
         total_day = filtered_day_df['cnt_x'].sum()
         avg_day = filtered_day_df['cnt_x'].mean()
         
-        col1 = st.columns(1)
-        col1.metric("Total Penyewaan (Harian)", f"{total_day:,}")
+ 
+        st.metric("Total Penyewaan (Harian)", f"{total_day:,}")
         
         st.subheader("Distribusi Level Permintaan")
         daily_avg = filtered_day_df.groupby('dteday')['cnt_x'].mean().reset_index()
@@ -207,8 +207,7 @@ if data_loaded:
         total_hour = filtered_hour_df['cnt_y'].sum()
         avg_hour = filtered_hour_df['cnt_y'].mean()
         
-        col1 = st.columns(1)
-        col1.metric("Total Penyewaan (Per Jam)", f"{total_hour:,}")
+        st.metric("Total Penyewaan (Per Jam)", f"{total_hour:,}")
         
         # Menampilkan grafik
         st.subheader("Distribusi Penyewaan Per Jam")
