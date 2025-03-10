@@ -13,13 +13,13 @@ st.title("Dashboard Analisis Penyewaan Sepeda")
 
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/FazarRizky/projek_analyst_data/refs/heads/main/dashboard/main_data.csv"
+    url = "main_data.csv"
     df = pd.read_csv(url)
-    day_df = df.drop_duplicates(subset=['dteday'])[['dteday', 'season', 'weathersit_x', 'cnt_x', 'Level_deman']]
-    hour_df = df[['dteday', 'season', 'hr', 'weathersit_y', 'cnt_y']]
+    df['dteday'] = pd.to_datetime(df['dteday'])
+    day_df = df.drop_duplicates(subset=['dteday'])[['dteday', 'season', 'weathersit_x', 'cnt_x', 'Level_deman_x']]
+    hour_df = df[['dteday', 'season', 'hr', 'weathersit_y', 'cnt_y', 'Level_deman_x']]
     
     return day_df, hour_df
-
 
 try:
     day_df, hour_df = load_data()
@@ -137,36 +137,98 @@ if data_loaded:
     tab1, tab2 = st.tabs(["Statistik Harian", "Statistik Per Jam"])
 
     with tab1:
-        total_day = day_df['cnt_x'].sum()
-        avg_day = day_df['cnt_x'].mean()
+        st.subheader("Statistik Data Harian")
+        
+        # Filter untuk tahun dan bulan
+        available_years = day_df['dteday'].dt.year.unique()
+        selected_year = st.selectbox("Pilih Tahun", available_years)
+        
+        available_months = day_df[day_df['dteday'].dt.year == selected_year]['dteday'].dt.month.unique()
+        selected_month = st.selectbox("Pilih Bulan", available_months, format_func=lambda x: pd.to_datetime(x, format='%m').strftime('%B'))
+        
+        # Filter untuk season
+        available_seasons = day_df['season'].unique()
+        selected_season = st.selectbox(
+            "Pilih Musim (Harian)", 
+            available_seasons, 
+            format_func=lambda x: {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}.get(x, f"Musim {x}")
+        )
+        
+        # Filter untuk weathersit_x
+        available_weather = day_df['weathersit_x'].unique()
+        selected_weather = st.selectbox(
+            "Pilih Cuaca (Harian)", 
+            available_weather, 
+            format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}.get(x, f"Cuaca {x}")
+        )
+        
+        # Filter data berdasarkan tahun, bulan, musim, dan cuaca
+        filtered_day_df = day_df[
+            (day_df['dteday'].dt.year == selected_year) &
+            (day_df['dteday'].dt.month == selected_month) &
+            (day_df['season'] == selected_season) & 
+            (day_df['weathersit_x'] == selected_weather)
+        ]
+        
+        total_day = filtered_day_df['cnt_x'].sum()
+        avg_day = filtered_day_df['cnt_x'].mean()
         
         col1, col2 = st.columns(2)
         col1.metric("Total Penyewaan (Harian)", f"{total_day:,}")
         col2.metric("Rata-rata Penyewaan per Hari", f"{avg_day:,.2f}")
         
-        if 'Level_deman' in day_df.columns:
-            st.subheader("Distribusi Level Permintaan")
-            fig, ax = plt.subplots(figsize=(8, 5))
-            demand_counts = day_df['Level_deman'].value_counts().reset_index()
-            demand_counts.columns = ['Level', 'Jumlah']
-            sns.barplot(x='Level', y='Jumlah', data=demand_counts, ax=ax, palette="Blues")
-            st.pyplot(fig)
+        st.subheader("Distribusi Level Permintaan")
+        daily_avg = filtered_day_df.groupby('dteday')['cnt_x'].mean().reset_index()
+        fig, ax = plt.subplots(figsize=(10, 6))
+        sns.lineplot(x='dteday', y='cnt_x', data=daily_avg, markers='o', ax=ax)
+        plt.xticks(rotation=45)
+        ax.set_xlabel("Tanggal")
+        ax.set_ylabel("Rata-rata Penyewaan")
+        ax.set_title(f"Rata-rata Penyewaan Sepeda per Hari (Bulan {selected_month} - {selected_year})")
+        ax.grid(True, linestyle='--', alpha=0.7)
+        st.pyplot(fig)
 
     with tab2:
-        total_hour = hour_df['cnt_y'].sum()
-        avg_hour = hour_df['cnt_y'].mean()
+        st.subheader("Statistik Data Per Jam")
+        
+        # Filter untuk season
+        available_seasons = hour_df['season'].unique()
+        selected_season = st.selectbox(
+            "Pilih Musim (Per Jam)", 
+            available_seasons, 
+            format_func=lambda x: {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}.get(x, f"Musim {x}")
+        )
+        
+        # Filter untuk weathersit_y
+        available_weather = hour_df['weathersit_y'].unique()
+        selected_weather = st.selectbox(
+            "Pilih Cuaca (Per Jam)", 
+            available_weather, 
+            format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}.get(x, f"Cuaca {x}")
+        )
+        
+        # Filter data berdasarkan pilihan
+        filtered_hour_df = hour_df[
+            (hour_df['season'] == selected_season) & 
+            (hour_df['weathersit_y'] == selected_weather)
+        ]
+        
+        # Menampilkan statistik
+        total_hour = filtered_hour_df['cnt_y'].sum()
+        avg_hour = filtered_hour_df['cnt_y'].mean()
         
         col1, col2 = st.columns(2)
         col1.metric("Total Penyewaan (Per Jam)", f"{total_hour:,}")
         col2.metric("Rata-rata Penyewaan per Jam", f"{avg_hour:,.2f}")
-
+        
+        # Menampilkan grafik
         st.subheader("Distribusi Penyewaan Per Jam")
-        hourly_avg = hour_df.groupby('hr')['cnt_y'].mean().reset_index()
+        hourly_avg = filtered_hour_df.groupby('hr')['cnt_y'].mean().reset_index()
         fig, ax = plt.subplots(figsize=(10, 6))
         sns.lineplot(x='hr', y='cnt_y', data=hourly_avg, marker='o', ax=ax)
         ax.set_xlabel("Jam")
         ax.set_ylabel("Rata-rata Penyewaan")
         ax.set_xticks(range(0, 24))
-        ax.set_title("Rata-rata Penyewaan Sepeda per Jam")
+        ax.set_title(f"Rata-rata Penyewaan Sepeda per Jam ")
         ax.grid(True, linestyle='--', alpha=0.7)
         st.pyplot(fig)
