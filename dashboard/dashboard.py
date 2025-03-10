@@ -146,14 +146,6 @@ if data_loaded:
         available_months = day_df[day_df['dteday'].dt.year == selected_year]['dteday'].dt.month.unique()
         selected_month = st.selectbox("Pilih Bulan", available_months, format_func=lambda x: pd.to_datetime(x, format='%m').strftime('%B'))
         
-        # Filter untuk season
-        available_seasons = day_df['season'].unique()
-        selected_season = st.selectbox(
-            "Pilih Musim (Harian)", 
-            available_seasons, 
-            format_func=lambda x: {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}.get(x, f"Musim {x}")
-        )
-        
         # Filter untuk weathersit_x
         available_weather = day_df['weathersit_x'].unique()
         selected_weather = st.selectbox(
@@ -166,7 +158,6 @@ if data_loaded:
         filtered_day_df = day_df[
             (day_df['dteday'].dt.year == selected_year) &
             (day_df['dteday'].dt.month == selected_month) &
-            (day_df['season'] == selected_season) & 
             (day_df['weathersit_x'] == selected_weather)
         ]
         
