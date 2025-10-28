@@ -18,7 +18,7 @@ st.title("Dashboard Analisis Penyewaan Sepeda")
 
 @st.cache_data
 def load_data():
-    url = "https://raw.githubusercontent.com/FazarRizky/projek_analyst_data/refs/heads/main/dashboard/main_data.csv"
+    url = "main_data.csv"
     df = pd.read_csv(url)
     df['dteday'] = pd.to_datetime(df['dteday'])
     day_df = df.drop_duplicates(subset=['dteday'])[['dteday', 'season', 'weathersit_x', 'cnt_x', 'Level_deman_x']]
