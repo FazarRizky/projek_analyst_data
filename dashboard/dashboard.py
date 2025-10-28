@@ -148,9 +148,6 @@ if data_loaded:
         ax.grid(True, linestyle='--', alpha=0.7)
         st.pyplot(fig)
 
-    # ======================================================
-    # 🧠 BAGIAN TAMBAHAN: PREDIKSI PENYEWAAN MASA DEPAN
-    # ======================================================
     st.header("Prediksi Penyewaan di Masa Depan")
 
     st.markdown("Masukkan parameter di bawah ini untuk memperkirakan jumlah penyewaan sepeda di waktu mendatang:")
