@@ -3,6 +3,11 @@ import pandas as pd
 import matplotlib.pyplot as plt
 import seaborn as sns
 import os
+import joblib
+from sklearn.preprocessing import OneHotEncoder
+from sklearn.compose import ColumnTransformer
+from sklearn.pipeline import Pipeline
+from sklearn.ensemble import RandomForestRegressor
 
 st.set_page_config(
     page_title="Dashboard Analisis Penyewaan Sepeda",
@@ -42,141 +47,75 @@ if data_loaded:
 
     def create_season_pie(df, title, color_palette, count_col):
         summary_df = df.groupby('season')[count_col].sum().reset_index()
-
         summary_df['season_label'] = summary_df['season'].map({
             1: 'Spring',
             2: 'Summer',
             3: 'Fall',
             4: 'Winter'
         })
-        
         fig, ax = plt.subplots(figsize=(8, 6))
-        ax.pie(summary_df[count_col], labels=summary_df['season_label'], autopct='%1.1f%%', 
+        ax.pie(summary_df[count_col], labels=summary_df['season_label'], autopct='%1.1f%%',
                 startangle=90, colors=sns.color_palette(color_palette))
         ax.set_title(title)
         ax.axis('equal')
-        
         return fig
 
     def create_weather_bar(df, title, color_palette, count_col, weather_col):
         weather_df = df.groupby(weather_col)[count_col].sum().reset_index()
-        
         fig, ax = plt.subplots(figsize=(8, 5))
         sns.barplot(x=weather_col, y=count_col, data=weather_df, palette=color_palette, ax=ax)
         ax.set_xlabel("Cuaca")
         ax.set_ylabel("Total Penyewaan")
         ax.set_title(title)
-
-        weather_labels = {
-            1: "Cerah",
-            2: "Berawan", 
-            3: "Hujan", 
-            4: "Badai"
-        }
-
+        weather_labels = {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}
         weather_values = sorted(weather_df[weather_col].unique())
         ax.set_xticks(range(len(weather_values)))
         ax.set_xticklabels([weather_labels.get(w, f"Cuaca {w}") for w in weather_values])
-        
         return fig
 
     if data_view == "Harian (day)" or data_view == "Keduanya":
         st.header("Analisis Data Harian")
-
         col1, col2 = st.columns(2)
-        
         with col1:
             st.subheader("Distribusi Penyewaan Berdasarkan Musim (Harian)")
-            season_pie_day = create_season_pie(
-                day_df, 
-                "Distribusi Penyewaan Sepeda Berdasarkan Musim (day)", 
-                "pastel",
-                'cnt_x'
-            )
+            season_pie_day = create_season_pie(day_df, "Distribusi Penyewaan Sepeda Berdasarkan Musim (day)", "pastel", 'cnt_x')
             st.pyplot(season_pie_day)
-        
         with col2:
             st.subheader("Penyewaan Berdasarkan Cuaca (Harian)")
-            weather_bar_day = create_weather_bar(
-                day_df, 
-                "Grafik penyewaan sepeda berdasarkan cuaca (day)", 
-                "Blues",
-                'cnt_x',
-                'weathersit_x'
-            )
+            weather_bar_day = create_weather_bar(day_df, "Grafik penyewaan sepeda berdasarkan cuaca (day)", "Blues", 'cnt_x', 'weathersit_x')
             st.pyplot(weather_bar_day)
 
     if data_view == "Per Jam (hour)" or data_view == "Keduanya":
         st.header("Analisis Data Per Jam")
-
         col1, col2 = st.columns(2)
-        
         with col1:
             st.subheader("Distribusi Penyewaan Berdasarkan Musim (Per Jam)")
-            season_pie_hour = create_season_pie(
-                hour_df, 
-                "Distribusi Penyewaan Sepeda Berdasarkan Musim (hour)", 
-                "Reds",
-                'cnt_y'
-            )
+            season_pie_hour = create_season_pie(hour_df, "Distribusi Penyewaan Sepeda Berdasarkan Musim (hour)", "Reds", 'cnt_y')
             st.pyplot(season_pie_hour)
-        
         with col2:
             st.subheader("Penyewaan Berdasarkan Cuaca (Per Jam)")
-            weather_bar_hour = create_weather_bar(
-                hour_df, 
-                "Grafik penyewaan sepeda berdasarkan cuaca (hour)", 
-                "Greens",
-                'cnt_y',
-                'weathersit_y'
-            )
+            weather_bar_hour = create_weather_bar(hour_df, "Grafik penyewaan sepeda berdasarkan cuaca (hour)", "Greens", 'cnt_y', 'weathersit_y')
             st.pyplot(weather_bar_hour)
 
     st.header("Statistik Penyewaan Sepeda")
-
     tab1, tab2 = st.tabs(["Statistik Harian", "Statistik Per Jam"])
 
     with tab1:
         st.subheader("Statistik Data Harian")
-        
-        # Filter untuk tahun dan bulan
         available_years = day_df['dteday'].dt.year.unique()
         selected_year = st.selectbox("Pilih Tahun", available_years)
-        
         available_months = day_df[day_df['dteday'].dt.year == selected_year]['dteday'].dt.month.unique()
         selected_month = st.selectbox("Pilih Bulan", available_months, format_func=lambda x: pd.to_datetime(x, format='%m').strftime('%B'))
-        
-        # Filter untuk season
-        available_seasons = day_df['season'].unique()
-        selected_season = st.selectbox(
-            "Pilih Musim (Harian)", 
-            available_seasons, 
-            format_func=lambda x: {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}.get(x, f"Musim {x}")
-        )
-        
-        # Filter untuk weathersit_x
         available_weather = day_df['weathersit_x'].unique()
-        selected_weather = st.selectbox(
-            "Pilih Cuaca (Harian)", 
-            available_weather, 
-            format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}.get(x, f"Cuaca {x}")
-        )
-        
-        # Filter data berdasarkan tahun, bulan, musim, dan cuaca
+        selected_weather = st.selectbox("Pilih Cuaca (Harian)", available_weather, format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}.get(x, f"Cuaca {x}"))
         filtered_day_df = day_df[
             (day_df['dteday'].dt.year == selected_year) &
             (day_df['dteday'].dt.month == selected_month) &
-            (day_df['season'] == selected_season) & 
             (day_df['weathersit_x'] == selected_weather)
         ]
-        
         total_day = filtered_day_df['cnt_x'].sum()
         avg_day = filtered_day_df['cnt_x'].mean()
-        
-        col1, col2 = st.columns(2)
-        col1.metric("Total Penyewaan (Harian)", f"{total_day:,}")
-        col2.metric("Rata-rata Penyewaan per Hari", f"{avg_day:,.2f}")
-        
+        st.metric("Total Penyewaan (Harian)", f"{total_day:,}")
         st.subheader("Distribusi Level Permintaan")
         daily_avg = filtered_day_df.groupby('dteday')['cnt_x'].mean().reset_index()
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -190,38 +129,14 @@ if data_loaded:
 
     with tab2:
         st.subheader("Statistik Data Per Jam")
-        
-        # Filter untuk season
         available_seasons = hour_df['season'].unique()
-        selected_season = st.selectbox(
-            "Pilih Musim (Per Jam)", 
-            available_seasons, 
-            format_func=lambda x: {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}.get(x, f"Musim {x}")
-        )
-        
-        # Filter untuk weathersit_y
+        selected_season = st.selectbox("Pilih Musim (Per Jam)", available_seasons, format_func=lambda x: {1: 'Spring', 2: 'Summer', 3: 'Fall', 4: 'Winter'}.get(x, f"Musim {x}"))
         available_weather = hour_df['weathersit_y'].unique()
-        selected_weather = st.selectbox(
-            "Pilih Cuaca (Per Jam)", 
-            available_weather, 
-            format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}.get(x, f"Cuaca {x}")
-        )
-        
-        # Filter data berdasarkan pilihan
-        filtered_hour_df = hour_df[
-            (hour_df['season'] == selected_season) & 
-            (hour_df['weathersit_y'] == selected_weather)
-        ]
-        
-        # Menampilkan statistik
+        selected_weather = st.selectbox("Pilih Cuaca (Per Jam)", available_weather, format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}.get(x, f"Cuaca {x}"))
+        filtered_hour_df = hour_df[(hour_df['season'] == selected_season) & (hour_df['weathersit_y'] == selected_weather)]
         total_hour = filtered_hour_df['cnt_y'].sum()
         avg_hour = filtered_hour_df['cnt_y'].mean()
-        
-        col1, col2 = st.columns(2)
-        col1.metric("Total Penyewaan (Per Jam)", f"{total_hour:,}")
-        col2.metric("Rata-rata Penyewaan per Jam", f"{avg_hour:,.2f}")
-        
-        # Menampilkan grafik
+        st.metric("Total Penyewaan (Per Jam)", f"{total_hour:,}")
         st.subheader("Distribusi Penyewaan Per Jam")
         hourly_avg = filtered_hour_df.groupby('hr')['cnt_y'].mean().reset_index()
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -232,3 +147,39 @@ if data_loaded:
         ax.set_title(f"Rata-rata Penyewaan Sepeda per Jam ")
         ax.grid(True, linestyle='--', alpha=0.7)
         st.pyplot(fig)
+
+    # ======================================================
+    # 🧠 BAGIAN TAMBAHAN: PREDIKSI PENYEWAAN MASA DEPAN
+    # ======================================================
+    st.header("Prediksi Penyewaan di Masa Depan")
+
+    st.markdown("Masukkan parameter di bawah ini untuk memperkirakan jumlah penyewaan sepeda di waktu mendatang:")
+
+    with st.form("prediction_form"):
+        col1, col2, col3 = st.columns(3)
+        with col1:
+            season = st.selectbox("Musim:", [1, 2, 3, 4], format_func=lambda x: ["Spring", "Summer", "Fall", "Winter"][x-1])
+            hr = st.slider("Jam (0–23):", 0, 23, 12)
+        with col2:
+            weathersit_x = st.selectbox("Cuaca Saat Ini:", [1, 2, 3, 4], format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}[x])
+            weathersit_y = st.selectbox("Cuaca Berikutnya:", [1, 2, 3, 4], format_func=lambda x: {1: "Cerah", 2: "Berawan", 3: "Hujan", 4: "Badai"}[x])
+        with col3:
+            cnt_x = st.number_input("Jumlah Penyewaan Saat Ini (cnt_x):", min_value=0, step=1)
+
+        submitted = st.form_submit_button("Prediksi")
+
+    if submitted:
+        # Load model yang sudah disimpan
+        if os.path.exists("model.pkl"):
+            model = joblib.load("model.pkl")
+            input_data = pd.DataFrame({
+                "season": [season],
+                "weathersit_x": [weathersit_x],
+                "cnt_x": [cnt_x],
+                "hr": [hr],
+                "weathersit_y": [weathersit_y]
+            })
+            prediction = model.predict(input_data)[0]
+            st.success(f"📈 Perkiraan jumlah penyewaan: **{int(prediction)} sepeda**")
+        else:
+            st.warning("⚠️ File model.pkl tidak ditemukan. Jalankan notebook pelatihan model terlebih dahulu.")
